@@ -350,21 +350,22 @@ impl DepsGraphCrate {
         let last_version = versions
             .iter()
             // filter out yanked and pre- versions
+            .filter(|metadata| !metadata.yanked)
             .filter_map(|metadata| {
-                if metadata.yanked {
-                    None
-                } else if let Ok(vers) = metadata.vers.parse::<Version>() {
-                    if vers.pre.is_empty() { Some(vers) } else { None }
-                } else {
-                    None
-                }
+                metadata
+                    .vers
+                    .parse::<Version>()
+                    .ok()
+                    .and_then(|vers| if vers.pre.is_empty() { Some(vers) } else { None })
             })
             .max()
-            .unwrap();
+            .unwrap_or(Version::new(0, 0, 0));
+
         let versions = versions
             .into_iter()
             .map(|metadata| {
                 let semver = metadata.vers.parse::<Version>()?;
+
                 Ok(DepsGraphCrateVersion {
                     is_outdated: semver < last_version,
                     semver,
@@ -372,6 +373,7 @@ impl DepsGraphCrate {
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
+
         Ok(Self {
             registry: package.registry.clone(),
             name: package.get_name().to_string(),
