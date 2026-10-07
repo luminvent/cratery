@@ -57,8 +57,11 @@ impl ServiceProvider for MockService {
         Arc::new(Self)
     }
 
-    async fn get_index(_config: &Configuration, _expect_empty: bool) -> Result<Arc<dyn Index + Send + Sync>, GitIndexError> {
-        Ok(Arc::new(Self))
+    fn get_index(
+        _config: &Configuration,
+        _expect_empty: bool,
+    ) -> impl Future<Output = Result<Arc<dyn Index + Send + Sync>, GitIndexError>> {
+        std::future::ready(Ok(Arc::new(Self) as Arc<dyn Index + Send + Sync>))
     }
 
     fn get_rustsec(_config: &Configuration) -> Arc<dyn RustSecChecker + Send + Sync> {

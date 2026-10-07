@@ -981,9 +981,18 @@ pub async fn index_serve_inner(
     }
 }
 
-fn index_serve_map_err(e: ApiError, domain: &str) -> (StatusCode, [(HeaderName, HeaderValue); 2], Json<ApiError>) {
+/// Error response for the index routes, boxed to keep the `Err` variant small
+pub struct IndexServeError(Box<Response>);
+
+impl IntoResponse for IndexServeError {
+    fn into_response(self) -> Response {
+        *self.0
+    }
+}
+
+fn index_serve_map_err(e: ApiError, domain: &str) -> IndexServeError {
     let (status, body) = response_error(e);
-    (
+    let response = (
         status,
         [
             (
@@ -994,12 +1003,11 @@ fn index_serve_map_err(e: ApiError, domain: &str) -> (StatusCode, [(HeaderName, 
         ],
         body,
     )
+        .into_response();
+    IndexServeError(Box::new(response))
 }
 
-pub async fn index_serve_check_auth(
-    application: &Application,
-    auth_data: &AuthData,
-) -> Result<(), (StatusCode, [(HeaderName, HeaderValue); 2], Json<ApiError>)> {
+pub async fn index_serve_check_auth(application: &Application, auth_data: &AuthData) -> Result<(), IndexServeError> {
     if application.configuration.self_public_read {
         return Ok(());
     }
@@ -1014,7 +1022,7 @@ pub async fn index_serve(
     auth_data: AuthData,
     State(state): State<Arc<AxumState>>,
     request: Request<Body>,
-) -> Result<(StatusCode, [(HeaderName, HeaderValue); 2], Body), (StatusCode, [(HeaderName, HeaderValue); 2], Json<ApiError>)> {
+) -> Result<(StatusCode, [(HeaderName, HeaderValue); 2], Body), IndexServeError> {
     let map_err = |e| index_serve_map_err(e, &state.application.configuration.web_domain);
     let path = request.uri().path();
     if path != "/config.json" && !state.application.configuration.index.allow_protocol_sparse {
@@ -1041,7 +1049,7 @@ pub async fn index_serve_info_refs(
     auth_data: AuthData,
     State(state): State<Arc<AxumState>>,
     Query(query): Query<HashMap<String, String>>,
-) -> Result<(StatusCode, [(HeaderName, HeaderValue); 2], Body), (StatusCode, [(HeaderName, HeaderValue); 2], Json<ApiError>)> {
+) -> Result<(StatusCode, [(HeaderName, HeaderValue); 2], Body), IndexServeError> {
     let map_err = |e| index_serve_map_err(e, &state.application.configuration.web_domain);
     if !state.application.configuration.index.allow_protocol_git {
         return Err(map_err(error_not_found()));
@@ -1077,7 +1085,7 @@ pub async fn index_serve_git_upload_pack(
     auth_data: AuthData,
     State(state): State<Arc<AxumState>>,
     body: Bytes,
-) -> Result<(StatusCode, [(HeaderName, HeaderValue); 2], Body), (StatusCode, [(HeaderName, HeaderValue); 2], Json<ApiError>)> {
+) -> Result<(StatusCode, [(HeaderName, HeaderValue); 2], Body), IndexServeError> {
     let map_err = |e| index_serve_map_err(e, &state.application.configuration.web_domain);
     if !state.application.configuration.index.allow_protocol_git {
         return Err(map_err(error_not_found()));

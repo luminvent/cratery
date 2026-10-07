@@ -351,13 +351,7 @@ impl DepsGraphCrate {
             .iter()
             // filter out yanked and pre- versions
             .filter(|metadata| !metadata.yanked)
-            .filter_map(|metadata| {
-                metadata
-                    .vers
-                    .parse::<Version>()
-                    .ok()
-                    .and_then(|vers| if vers.pre.is_empty() { Some(vers) } else { None })
-            })
+            .filter_map(|metadata| metadata.vers.parse::<Version>().ok().filter(|vers| vers.pre.is_empty()))
             .max()
             .unwrap_or(Version::new(0, 0, 0));
 
