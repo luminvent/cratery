@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["**"]
     tags: ["v*"]
   pull_request:
 
@@ -57,6 +57,7 @@ jobs:
   docker:
     name: Build and push Docker image
     needs: [build]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -75,6 +76,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
             type=sha
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
