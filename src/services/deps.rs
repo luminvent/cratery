@@ -49,6 +49,7 @@ pub fn create_deps_worker(
                     error!("{backtrace}");
                 }
             }
+            info!("crates.io index is cached");
         }
     });
 
@@ -77,6 +78,9 @@ async fn run_deps_worker_job(
     let mut interval = tokio::time::interval(Duration::from_secs(deps_check_period));
     loop {
         let _instant = interval.tick().await;
+
+        info!("start to check dependencies");
+
         if let Err(e) = deps_worker_job(
             &configuration,
             service_deps_checker.clone(),
@@ -109,6 +113,10 @@ async fn deps_worker_job(
         database.get_unanalyzed_crates(configuration.deps_stale_analysis).await
     })
     .await?;
+
+    if jobs.is_empty() {
+        info!("no dependency check required");
+    }
 
     for job in jobs {
         if let Err(api_error) = deps_worker_job_on_crate_version(
@@ -427,6 +435,7 @@ impl DepsCheckerImpl {
         reg_location.push(DATA_SUB_DIR);
         reg_location.push(reg_name);
         if is_stale {
+            info!("updating registry {reg_name}");
             if tokio::fs::try_exists(&reg_location).await? {
                 crate::utils::execute_git(&reg_location, &["fetch", "origin", "master"]).await?;
                 crate::utils::execute_git(&reg_location, &["reset", "--hard", "origin/master"]).await?;
@@ -439,6 +448,7 @@ impl DepsCheckerImpl {
         drop(data);
 
         // load from file
+        info!("load dependency {dep_name} from file");
         let file_path = self.get_dependency_info_file_path(dep_name, reg_name).await?;
         let file = File::open(&file_path).await?;
         let mut reader = tokio::io::BufReader::new(file).lines();
