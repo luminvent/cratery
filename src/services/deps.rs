@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use futures::lock::Mutex;
-use log::{error, info};
+use log::{debug, error, info};
 use tokio::fs::File;
 use tokio::io::AsyncBufReadExt;
 
@@ -144,7 +144,7 @@ async fn deps_worker_job_on_crate_version(
     pool: &RwSqlitePool,
     job: &DepsAnalysisJobSpec,
 ) -> Result<(), ApiError> {
-    info!("checking deps for {} {}", job.package, job.version);
+    debug!("checking deps for {} {}", job.package, job.version);
     let analysis = service_deps_checker
         .check_crate(&job.package, &job.version, &job.targets)
         .await?;
@@ -448,7 +448,7 @@ impl DepsCheckerImpl {
         drop(data);
 
         // load from file
-        info!("load dependency {dep_name} from file");
+        debug!("load dependency {dep_name} from file");
         let file_path = self.get_dependency_info_file_path(dep_name, reg_name).await?;
         let file = File::open(&file_path).await?;
         let mut reader = tokio::io::BufReader::new(file).lines();
