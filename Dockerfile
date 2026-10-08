@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		pkg-config \
 		libsqlite3-0 \
 		libsqlite3-dev \
+        libssl-dev \
 		musl-tools \
 		git \
 		ssh
@@ -44,4 +45,5 @@ RUN cd /home/cratery/src && cargo +stable build ${BUILD_FLAGS}
 FROM base
 ARG BUILD_TARGET
 COPY --from=builder /home/cratery/src/target/${BUILD_TARGET}/cratery /
+
 ENTRYPOINT ["/cratery"]
